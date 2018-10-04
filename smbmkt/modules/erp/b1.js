@@ -28,9 +28,25 @@ const hash_Session = "b1_SessionID"
 const hash_Timeout = "b1_Timeout"
 const timout_exp = "b1_Expire"
 
+//Destinations 
+const Route    = require("../dest/Destination");
 
-//Load Environment Variables
-const SLServer = process.env.B1_SERVER_ENV + ":" + process.env.B1_SLPORT_ENV + process.env.B1_SLPATH_ENV;
+var SLServer = null;
+// Load ByD route and destination
+var b1Route = null;
+var b1Dest = null;
+Route.getRoute("B1").then( r => {
+    b1Route = r;
+    console.log("b1Route " + b1Route.target.name);
+
+    // Load destination
+     b1Route.getDestination().then(dest => {
+        console.log(dest);
+        b1Dest = dest;
+        SLServer = b1Dest.destinationConfiguration.URL;
+    });
+});
+
 
 function ServiceLayerRequest(options, callback) {
 
@@ -142,10 +158,11 @@ let Connect = function () {
         var resp = {}
 
         //B1 Login Credentials
+        var destUser = JSON.parse(b1Dest.destinationConfiguration.User);
         var data = {
-            UserName: process.env.B1_USER_ENV,
-            Password: process.env.B1_PASS_ENV,
-            CompanyDB: process.env.B1_COMP_ENV
+            UserName: destUser.UserName, 
+            Password: b1Dest.destinationConfiguration.Password, 
+            CompanyDB: destUser.CompanyDB 
         };
 
         //Set HTTP Request Options

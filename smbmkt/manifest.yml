@@ -20,3 +20,6 @@ applications:
   services:
     - cachedb
     - itemsdb
+    - destination-demo-lite
+    - xsuaa-demo
+    - connectivity-demo-lite
