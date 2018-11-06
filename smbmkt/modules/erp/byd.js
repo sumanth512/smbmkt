@@ -183,7 +183,7 @@ function GetItems(query, callback) {
 function GetItemPrice(query, callback) {
     var options = {};
 
-    if (query && query.hasOwnProperty("$filter")) {
+    if (query && query.hasOwnProperty("$filter") && query["$filter"]) {
         //To be replaced by Normalize.ItemQuery()
         query["$filter"] = query["$filter"].replace(new RegExp('productid', 'g'), "CIPR_PRODUCT")
     } else {
