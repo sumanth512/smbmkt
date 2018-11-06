@@ -61,10 +61,11 @@ function formatResponse(body) {
         delete body["odata.metadata"];
     }
 
-    if (body.hasOwnProperty("odata.nextLink")) {
-        var nextLink = body["odata.nextLink"]
+    // B1 response v2 odata.nextLink, v4 @odata.nextLink
+    if (body.hasOwnProperty("@odata.nextLink")) {
+        var nextLink = body["@odata.nextLink"]
         nextLink = nextLink.substr(nextLink.indexOf("?")+1,nextLink.lenght);
-        body["odata.nextLink"] = nextLink
+        body["@odata.nextLink"] = nextLink
     }
     return body;
 }

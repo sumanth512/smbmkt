@@ -27,7 +27,10 @@ module.exports = {
     UpdateVector: function (data, callback) {
         return (UpdateVector(data, callback));
     },
-    setClient: function (inClient) { pgClient = inClient; }
+    setClient: function (inClient) { pgClient = inClient; },
+    Clean: function (callback) {
+        return (Clean(callback));
+    }
 
 }
 
@@ -154,6 +157,18 @@ function UpdateVector(data, callback) {
             if (typeof callback === "function") { callback(err) }
         } else {
             if (typeof callback === "function") { callback(null, result) }
+        }
+    });
+}
+
+function Clean(callback) {
+    var query = 'DELETE FROM items'
+    pgClient.query(query, function (err, result) {
+        if (err) {
+            console.error("Clean DB " + err)
+            callback(err)
+        } else {
+            callback(null, result.rows)
         }
     });
 }

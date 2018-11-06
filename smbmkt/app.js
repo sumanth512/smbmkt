@@ -112,7 +112,7 @@ app.post('/SimilarItems', function (req, res) {
 
     console.log("Finding similiar Items for: ")
     console.log(req.body)
-    biz.SimilarItems(req.body, function (err, resp) {
+    biz.SimilarItems(req, function (err, resp) {
         res.setHeader('Content-Type', 'application/json')
         if (err) {
             res.status(500).send(resp)
@@ -124,15 +124,20 @@ app.post('/SimilarItems', function (req, res) {
     console.log('GetSimilarItems')
 });
 
-app.post('/SalesOrders', function (req, res) {
-    console.log("REQUEST: Create Sales Order")
-    biz.CreateSalesOrder(req.body, function (response) {
-        res.setHeader('Content-Type', 'application/json')
-        res.status(201)
-        res.send(response)
-    })
-});
+app.delete('/CleanDB', function (req, res) {
 
+    console.log("Clean ALL Items")
+    sql.Clean(function (err, resp) {
+        res.setHeader('Content-Type', 'application/json')
+        if (err) {
+            res.status(500).send(resp)
+        } else {
+            console.dir(resp);
+            res.status(200).send(resp)
+        }
+    });
+    console.log('Clean ')
+});
 
 var port = process.env.PORT || 30000
 app.listen(port, function () {

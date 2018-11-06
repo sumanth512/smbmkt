@@ -36,7 +36,7 @@ function Initialize() {
                     console.log(origin + " Items Loaded")
                     if (call == erps.length) {
                         console.log("Starting processing of Images")
-                        RetrieveImages(function (text) {
+                        RetrieveImages(origin, function (text) {
                             console.log("DB Vectorized")
                         })
                     }
@@ -50,11 +50,12 @@ function Initialize() {
 
 function loadErpItems(origin, query, callback) {
     //Load ERP Items and insert them in the app DB
+
+    console.log("loadErpItems Getting data from " + origin + " " + query)
+
     if (query) {
         query = qs.parse(query);
     }
-
-    console.log("Getting data from " + origin)
 
     erp = eval(origin);
 
@@ -70,9 +71,10 @@ function loadErpItems(origin, query, callback) {
             //Update DB
             InsertItemVectorDB(normalize.Items(output))
 
-            if (items.hasOwnProperty("odata.nextLink")) {
-                output[origin]["odata.nextLink"] = items["odata.nextLink"];
-                loadErpItems(origin, output[origin]["odata.nextLink"], callback);
+            // B1 response odata v2 odata.nextLink, odata v4 @odata.nextLink
+            if (items.hasOwnProperty("@odata.nextLink")) {
+                output[origin]["@odata.nextLink"] = items["@odata.nextLink"];
+                loadErpItems(origin, output[origin]["@odata.nextLink"], callback);
             } else {
                 callback(origin)
             }
@@ -97,8 +99,8 @@ function InsertItemVectorDB(data) {
     }
 }
 
-function RetrieveImages(callback) {
-    sql.Select(function (err, rows) {
+function RetrieveImages(origin, callback) {
+    sql.SelectErpItems(origin, function (err, rows) {
         if (err) {
             console.error("Can't select items to retrieve images from " + origin)
         } {
@@ -122,7 +124,9 @@ function RetrieveImages(callback) {
                         } else {
                             console.error(error);
                         }
-                        biz.UpdateItemPrices()
+                        if (origin == "byd") {
+                            biz.UpdateItemPrices()
+                        }
                     })
                 })
         }

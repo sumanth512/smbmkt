@@ -6,6 +6,7 @@
  */
 
 const request = require("request");
+const formidable = require('formidable');
 const fs = require("fs");
 const qs = require("qs")
 const path = require("path")
@@ -34,9 +35,6 @@ module.exports = {
     SimilarItems: function (body, callback) {
         return (SimilarItems(body, callback))
     },
-    CreateSalesOrder: function (body, callback) {
-        return (CreateSalesOrder(body, callback))
-    },
     UpdateItemPrices() {
         return (UpdateItemPrices())
     },
@@ -63,79 +61,16 @@ module.exports = {
     }
 
 }
-function SimilarItems(body, callback) {
+function SimilarItems(req, callback) {
 
-    var output = {}
-    console.log("Dowloading image from: " + body.url)
-
-    //Handle images that requires parameters to be acessed
-    var imgRequest = {
-        method: "GET",
-        url: body.url,
-        qs: qs.parse(body.url)
+    if (req.body.url) {
+        console.log("Dowloading image from: " + req.body.url)
+        LoadImage(req.body, callback, AnalyzeImage)
     }
-
-    var imgName = body.url;
-    if (imgName.indexOf("?") > 0) {
-        //There are parameters in the URL Request
-        imgName = imgName.substr(0, body.url.indexOf("?"))
+    else {
+        console.log("Uploading image from file")
+        UploadImage(req, callback, AnalyzeImage)
     }
-
-    DownloadImage(imgRequest, uuid.v4() + path.extname(imgName), function (imgPath) {
-
-        console.log("Extracting Vector for " + imgPath)
-        leo.extractVectors(imgPath, function (error, vector) {
-            if (error) {
-                console.error(error)
-                output.message = "Can't Extract vector for" + imgPath + " - " + error;
-                return callback(error, output)
-            }
-
-            console.log("Loading Vector Database")
-            sql.SelectImages(function (error, result) {
-                if (error) {
-                    console.error(error)
-                    output.message = "Can't retrive vector database " + error;
-                    return callback(error, output)
-                }
-
-                console.log("Creating Zip with vector library")
-                CreateSimilarityZip(result, vector, function (error, zipFile) {
-                    if (error) {
-                        console.error(error)
-                        output.message = "Cant Create library ZIP" + error;
-                        return callback(error, output)
-                    }
-
-                    var numSimilar = null;
-                    if (body.hasOwnProperty("similarItems")) {
-                        numSimilar = body.similarItems
-                    }
-
-                    console.log("Calling Leonardo Similarity Scoring")
-                    leo.SimilatiryScoring(zipFile, numSimilar, function (error, similars) {
-                        if (error) {
-                            console.error(error)
-                            output.message = "Cant retrieve SimilatiryScoring - " + error;
-                            return callback(error, output)
-                        }
-
-                        console.log("Ranking Similarity Response")
-                        MostSimilarItems(imgPath, similars, function (SimilarResponse) {
-                            console.log("Formating Similarity Response and retrieve ERP Data")
-                            formatSimilarResponse(SimilarResponse).then(function (finalData) {
-
-                                //Erase all files from temp directories
-                                CleanDirectory(process.env.TEMP_DIR)
-                                CleanDirectory(process.env.VECTOR_DIR)
-                                callback(null, finalData)
-                            })
-                        })
-                    })
-                })
-            })
-        })
-    })
 }
 
 let formatSimilarResponse = function (response) {
@@ -212,46 +147,6 @@ function MostSimilarItems(base, similars, callback) {
         }
     }
 }
-
-function CreateSalesOrder(body, callback) {
-    /* Receives a body with all items from each erp */
-
-    var fResp = {};
-
-    call = 0;
-    for (key in body) {
-        var re = PostErpSalesOrder(key, body[key]).then(function (salesOrder) {
-            fResp[Object.keys(salesOrder)] = salesOrder[Object.keys(salesOrder)].values;
-            call++;
-            if (call == Object.keys(body).length) {
-                callback(fResp)
-            }
-        })
-    }
-
-}
-
-let PostErpSalesOrder = function (origin, body) {
-    return new Promise(function (resolve, reject) {
-        var erp = eval(origin);
-
-        erp.PostSalesOrder(body, function (error, salesOrder) {
-            if (error) {
-                salesOrder = {};
-                salesOrder.error = error;
-            }
-            var output = {};
-            if (salesOrder.hasOwnProperty("value")) {
-                salesOrder = salesOrder.value
-            }
-
-            output[origin] = { values: salesOrder.error || salesOrder }
-            resolve(normalize.SalesOrders(output))
-        })
-
-    })
-}
-
 
 function CreateSimilarityZip(library, similar, callback) {
     // Create e zip file of vectors to be used by the Similarity scoring service 
@@ -416,7 +311,128 @@ function UpdateItemPrices() {
     })
 }
 
+// Downloads an image from the body URL, called from SimilarItems
+function LoadImage(body, maincallback, callback) {
 
+    console.log("LoadImage " + body.url);
+    //Handle images that requires parameters to be acessed
+    var imgRequest = {
+        method: "GET",
+        url: body.url,
+        qs: qs.parse(body.url)
+    }
+    
+    var imgName = body.url;
+    if (imgName.indexOf("?") > 0) {
+        //There are parameters in the URL Request
+        imgName = imgName.substr(0, body.url.indexOf("?"))
+    }
+    
+    console.log("Downloading image from " + imgRequest)
+    request.head(imgRequest, function (err, res, body) {
+        var imgPath = path.join(process.env.TEMP_DIR, uuid.v4() + path.extname(imgName))
+        request(imgRequest).pipe(fs.createWriteStream(imgPath)).on('close', function () {
+            callback(imgPath, body, maincallback)
+        });
+    });
+}
+
+// Uploads an image from the request file content, called from SimilarItems
+function UploadImage(req, maincallback, callback) {
+
+    // create an incoming form object
+    var form = new formidable.IncomingForm();
+    // specify that we want to allow the user to upload multiple files in a single request
+    form.multiples = false;
+    // store all uploads in the /uploads directory
+    form.uploadDir = process.env.TEMP_DIR;
+
+    // File uploaded successfuly. 
+    form.on('file', function (field, file) {
+        //var filePath = uuid.v4() + file.path + '.jpg';
+        fs.rename(file.path, file.path + '.jpg', function( error ) {});
+        //Callback with the route to the file in the server
+        callback(file.path + '.jpg', null, maincallback);
+    });
+
+    // log any errors that occur
+    form.on('error', function (err) {
+        console.log('An error has occured uploaiding the file: \n' + err);
+        maincallback(null, err);
+    });
+
+    form.on('end', function (a,b,c) {
+        console.dir(a)
+        console.dir(b)
+        console.dir(c)
+    });
+
+    // parse the incoming request containing the form data
+    form.parse(req, function (err, fields, files) {
+        console.log(files)
+    });
+
+
+}
+
+// Analyzes an image in both cases: URL and File for SimilarItems
+function AnalyzeImage(imgPath, body, callback) {
+
+    console.log("Extracting Vector for " + imgPath)
+    leo.extractVectors(imgPath, function (error, vector) {
+        if (error) {
+            console.error(error)
+            output.message = "Can't Extract vector for" + imgPath + " - " + error;
+            return callback(error, output)
+        }
+
+        console.log("Loading Vector Database")
+        sql.SelectImages(function (error, result) {
+            if (error) {
+                console.error(error)
+                output.message = "Can't retrive vector database " + error;
+                return callback(error, output)
+            }
+
+            console.log("Creating Zip with vector library")
+            CreateSimilarityZip(result, vector, function (error, zipFile) {
+                if (error) {
+                    console.error(error)
+                    output.message = "Cant Create library ZIP" + error;
+                    return callback(error, output)
+                }
+
+                var numSimilar = null;
+                if (body && body.hasOwnProperty("similarItems")) {
+                    numSimilar = body.similarItems
+                }
+
+                console.log("Calling Leonardo Similarity Scoring")
+                leo.SimilatiryScoring(zipFile, numSimilar, function (error, similars) {
+                    if (error) {
+                        console.error(error)
+                        output.message = "Cant retrieve SimilatiryScoring - " + error;
+                        return callback(error, output)
+                    }
+
+                    console.log("Ranking Similarity Response")
+                    MostSimilarItems(imgPath, similars, function (SimilarResponse) {
+                        console.log("Formating Similarity Response and retrieve ERP Data")
+                        formatSimilarResponse(SimilarResponse).then(function (finalData) {
+
+                            //Erase all files from temp directories
+                            CleanDirectory(process.env.TEMP_DIR)
+                            CleanDirectory(process.env.VECTOR_DIR)
+                            callback(null, finalData)
+                        })
+                    })
+                })
+            })
+        })
+    })
+}
+
+// Called at Initialize to download one by one all the images
 function DownloadImage(uri, filename, callback) {
     console.log("Downloading image from " + uri)
     request.head(uri, function (err, res, body) {
@@ -427,6 +443,7 @@ function DownloadImage(uri, filename, callback) {
     });
 }
 
+// Clean the temp directory after all files saved into the db
 function CleanDirectory(directory) {
 
     console.log("Cleaning directory - " + directory)
@@ -466,3 +483,5 @@ function compareScore(a, b) {
         return -1;
     return 0;
 }
+
+
