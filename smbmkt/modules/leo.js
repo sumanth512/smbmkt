@@ -70,7 +70,7 @@ function SimilatiryScoring(vectorsZip, numSimilars, callback) {
     **/
 
     numSimilars = numSimilars || 4
-    var enpoint = process.env.LEO_SIMILARITY_ENDPOINT || 'similarityscoring/similarity-scoring'
+    var enpoint = process.env.LEO_SIMILARITY_ENDPOINT || '/similarityscoring/similarity-scoring'
     
     var options = {
         url: LeoServer+enpoint,
@@ -86,7 +86,7 @@ function SimilatiryScoring(vectorsZip, numSimilars, callback) {
 
     request.post(options, function (err, res, body) {
         if (err || res.statusCode != 200) {
-            console.error("LEO - Can't run Similarity scoring for " + vectorsZip)
+            console.error("LEO - Can't run Similarity scoring at " + LeoServer + enpoint  + " for " + vectorsZip);
             if (!err) {
                 err = "Status Code - " + res.statusCode + " - " + res.statusMessage
             }
