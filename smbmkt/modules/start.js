@@ -36,9 +36,12 @@ function Initialize() {
                     console.log(origin + " Items Loaded")
                     if (call == erps.length) {
                         console.log("Starting processing of Images")
-                        RetrieveImages(origin, function (text) {
+                        RetrieveImages(function (text) {
                             console.log("DB Vectorized")
                         })
+                    }
+                    if (origin == "byd") {
+                        biz.UpdateItemPrices()
                     }
                 });
             }
@@ -99,10 +102,10 @@ function InsertItemVectorDB(data) {
     }
 }
 
-function RetrieveImages(origin, callback) {
-    sql.SelectErpItems(origin, function (err, rows) {
+function RetrieveImages(callback) {
+    sql.Select(function (err, rows) {
         if (err) {
-            console.error("Can't select items to retrieve images from " + origin)
+            console.error("Can't select items to retrieve images ")
         } {
             DowloadAllImages(rows)
                 .then(CreateFeatureExtractionZip)
@@ -123,9 +126,6 @@ function RetrieveImages(origin, callback) {
                             }
                         } else {
                             console.error(error);
-                        }
-                        if (origin == "byd") {
-                            biz.UpdateItemPrices()
                         }
                     })
                 })
