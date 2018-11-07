@@ -1,0 +1,24 @@
+CreateSalesOrder: function (oEvent) {
+    // Get Data from ODataModel V4 /Orders 
+    var body = {
+        "b1": {
+            "lines": [{
+                "productid": oEvent.getSource().getBindingContext().getObject().productid,
+                "Quantity": 1
+            }]
+        }
+    };
+
+    $.ajax({
+        url: "/YOUR_smbmkt_destination/SalesOrders",  
+        type: "POST",
+        data: JSON.stringify(body),
+        contentType: "application/json",
+        success: function (data) {
+            MessageToast.show("B1 SalesOrder number " + data.b1[0].OrderNum + " created.");
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            MessageToast.show("POST SalesOrders error: " + JSON.stringify(jqXHR.responseJSON));
+        }
+    });
+}

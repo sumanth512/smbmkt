@@ -1,0 +1,70 @@
+,
+fileUploadChange: function (oControlEvent) {
+    // init the src file, name & url
+    this.srcFileURL = null;
+    this.srcFileName = null;
+    this.srcFile = null;
+    // keep a reference of the uploaded file name and create a url out of that when this is an image
+    this.srcFile = oControlEvent.getParameters().files[0];
+    this.srcFileName = this.srcFile.name;
+    if (this.srcFile.type.match("image.*")) {
+        this.srcFileURL = URL.createObjectURL(this.srcFile);
+    } 
+},
+
+fileUploadComplete: function (oControlEvent) {
+    // get the current view
+    var oView = this.getView();
+    // smbmkt backend
+    // clear previous results from the model
+    oView.getModel("demo").setProperty("/result", null);
+    var processResult = function (oController, data) {
+        oView = oController.getView();
+
+        // merge with existing results -  working with B1 only on this case
+        var result = oView.getModel("demo").getProperty("/result");
+        if (result) {
+            result.push.apply(result, data.b1);
+        } else {
+            result = data.b1;
+        }
+        oView.getModel("demo").setProperty("/result", result);
+        oView.getModel("demo").setProperty("/fileURL", oController.srcFileURL);
+
+        // Set Model to Table 
+        var oTable = oView.byId("tableImgClass");
+        oTable.setModel(oView.getModel("demo"));
+    };
+    if (oControlEvent.getParameters().status === 200) {
+        // get the response as JSON and process the results
+        processResult(this, JSON.parse(oControlEvent.getParameters().responseRaw));
+    } else {
+        MessageToast.show("Error " + oControlEvent.getParameters().status + " : " + JSON.parse(oControlEvent.getParameters().responseRaw).error_description);
+    }
+},
+
+CreateSalesOrder: function (oEvent) {
+    // Get Data from ODataModel V4 /Orders 
+    var body = {
+        "b1": {
+            "lines": [{
+                "productid": oEvent.getSource().getBindingContext().getObject().productid,
+                "Quantity": 1
+            }]
+        }
+    };
+
+    $.ajax({
+        url: "/smbmkt_destination/SalesOrders",  
+        type: "POST",
+        data: JSON.stringify(body),
+        contentType: "application/json",
+        success: function (data) {
+            MessageToast.show("B1 SalesOrder number " + data.b1[0].OrderNum + " created.");
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            MessageToast.show("POST SalesOrders error: " + JSON.stringify(jqXHR.responseJSON));
+        }
+    });
+}
+

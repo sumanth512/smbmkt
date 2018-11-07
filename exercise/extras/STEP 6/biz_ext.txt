@@ -1,0 +1,43 @@
+    CreateSalesOrder: function (body, callback) {
+        return (CreateSalesOrder(body, callback))
+    },
+
+
+function CreateSalesOrder(body, callback) {
+    /* Receives a body with all items from each erp */
+
+    var fResp = {};
+
+    call = 0;
+    for (key in body) {
+        var re = PostErpSalesOrder(key, body[key]).then(function (salesOrder) {
+            fResp[Object.keys(salesOrder)] = salesOrder[Object.keys(salesOrder)].values;
+            call++;
+            if (call == Object.keys(body).length) {
+                callback(fResp)
+            }
+        })
+    }
+
+}
+
+let PostErpSalesOrder = function (origin, body) {
+    return new Promise(function (resolve, reject) {
+        var erp = eval(origin);
+
+        erp.PostSalesOrder(body, function (error, salesOrder) {
+            if (error) {
+                salesOrder = {};
+                salesOrder.error = error;
+            }
+            var output = {};
+            if (salesOrder.hasOwnProperty("value")) {
+                salesOrder = salesOrder.value
+            }
+
+            output[origin] = { values: salesOrder.error || salesOrder }
+            resolve(normalize.SalesOrders(output))
+        })
+
+    })
+}

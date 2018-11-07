@@ -1,0 +1,9 @@
+
+app.post('/SalesOrders', function (req, res) {
+    console.log("REQUEST: Create Sales Order")
+    biz.CreateSalesOrder(req.body, function (response) {
+        res.setHeader('Content-Type', 'application/json')
+        res.status(201)
+        res.send(response)
+    })
+});
