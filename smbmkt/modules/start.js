@@ -25,7 +25,7 @@ const normalize = require("./normalize")
 
 
 function Initialize() {
-    var erps = ['b1'] // 'byd', 
+    var erps = ['byd', 'b1']
 
     sql.Initialize(function (error) {
         if (!error) {
