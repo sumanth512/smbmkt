@@ -64,7 +64,8 @@ function ByDRequest(options, callback) {
 
             request(options, function (error, response, body) {
                 if (error) {
-                    console.error(error.message)
+                    console.error("ByDRequest " + error.message)
+                    callback(error, error.message);
                 } else {
                     if (response.statusCode == 403) {
                         console.log("Invalid CSRF token. Reconnecting..")
