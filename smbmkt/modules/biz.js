@@ -378,11 +378,12 @@ function UploadImage(req, maincallback, callback) {
 // Analyzes an image in both cases: URL and File for SimilarItems
 function AnalyzeImage(imgPath, body, callback) {
 
+    var output = {}
     console.log("Extracting Vector for " + imgPath)
-    leo.extractVectors(imgPath, function (error, vector) {
+    leo.extractVectors(imgPath, function (error, vector) {  
         if (error) {
             console.error(error)
-            output.message = "Can't Extract vector for" + imgPath + " - " + error;
+            output.message = "Can't Extract vector for " + imgPath + " - " + error;
             return callback(error, output)
         }
 
@@ -390,7 +391,7 @@ function AnalyzeImage(imgPath, body, callback) {
         sql.SelectImages(function (error, result) {
             if (error) {
                 console.error(error)
-                output.message = "Can't retrive vector database " + error;
+                output.message = "Can't retrieve vector database " + error;
                 return callback(error, output)
             }
 

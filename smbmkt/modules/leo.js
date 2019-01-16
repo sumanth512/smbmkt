@@ -45,8 +45,7 @@ function extractVectors(file, callback) {
                 console.error(err)
             } else {
                 err = "Status Code - " + res.statusCode + " - " + res.statusMessage
-                console.error(err)
-                console.error(body)
+                logLeoError(enpoint, res, body)
             }
             callback(err, null)
         }
@@ -89,6 +88,7 @@ function SimilatiryScoring(vectorsZip, numSimilars, callback) {
             console.error("LEO - Can't run Similarity scoring at " + LeoServer + enpoint  + " for " + vectorsZip);
             if (!err) {
                 err = "Status Code - " + res.statusCode + " - " + res.statusMessage
+                logLeoError(enpoint, res, body)
             }
             console.error(err)
             callback(err, null)
@@ -149,4 +149,10 @@ function Classify(text, callback) {
             return callback(body.status_message, res, null);
         }
     });
+}
+
+function logLeoError(endpoint, response, body){
+    console.error("RESPONSE "+ endpoint+ " - " + response.statusCode + " - " + response.statusMessage)
+    console.error("BODY"+ endpoint+ " - "+ body)
+
 }
