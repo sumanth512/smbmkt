@@ -33,18 +33,23 @@ const hash_csrf = "byd_CSRF"
 const model_sales = "/khsalesorderdemo/SalesOrderCollection"
 const model_items = "/byd_items/MaterialCollection"
 
-//Load Environment Variables
-const ByDServer = process.env.BYD_SERVER + ":" + process.env.BYD_PORT + process.env.BYD_PATH;
-const ByDHeader = {
-    url: ByDServer,
-    headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": "Basic " + process.env.BYD_AUTH,
-        "x-csrf-token": "fetch",
-        "Cookie": ""
-    }
-};
+//Destinations
+const Route    = require("../dest/Destination");
+
+// Load ByD route and destination
+var bydRoute = null;
+var bydDest = null;
+Route.getRoute("ByD").then( r => {
+    bydRoute = r;
+    console.log("bydRoute " + bydRoute.target.name);
+
+    // Load destination
+    // destination based on route, need to wait!
+    bydRoute.getDestination().then(dest => {
+        console.log(dest);
+        bydDest = dest;
+    });
+});
 
 
 function ByDRequest(options, callback) {
@@ -59,7 +64,7 @@ function ByDRequest(options, callback) {
             options.headers["x-csrf-token"] = csrfToken
             options.headers["Accept"] = "application/json"
             options.headers["Content-Type"] = "application/json"
-            options.headers["Authorization"] = "Basic " + process.env.BYD_AUTH
+            options.headers["Authorization"] = "Basic " + bydDest.authTokens[0].value
             console.log("Preparing BYD Request:" + JSON.stringify(options))
 
             request(options, function (error, response, body) {
@@ -121,7 +126,7 @@ function GetItems(query, callback) {
     query["$expand"] = "MaterialTextCollection"
 
 
-    options.url = getByDserver() + model_items
+    options.url = bydDest.destinationConfiguration.URL + bydRoute.target.entryPath + model_items
     options.method = "GET"
     options.qs = odata.formatQuery(query, select)
 
@@ -135,7 +140,7 @@ function GetItems(query, callback) {
 
             // ** \/ I am not proud of this \/ ** 
             var optQty = {
-                url: process.env.BYD_SERVER + "/sap/byd/odata/ana_businessanalytics_analytics.svc/RPZ3AC654ED1CC343F1741612QueryResults",
+                url: bydDest.destinationConfiguration.URL + "/sap/byd/odata/ana_businessanalytics_analytics.svc/RPZ3AC654ED1CC343F1741612QueryResults",
                 qs: qs.parse("$format=json&$select=CMATERIAL_UUID,KCENDING_QUANTITY&$top=100000")
             }
             ByDRequest(optQty, function (error, response, bodyQty) {
@@ -194,7 +199,7 @@ function GetItemPrice(query, callback) {
     query["$format"] = "json"
 
     options = {
-        url: process.env.BYD_SERVER + "/sap/byd/odata/ana_businessanalytics_analytics.svc/RPZBB683E8960C6B776E12234QueryResults",
+        url: bydDest.destinationConfiguration.URL + "/sap/byd/odata/ana_businessanalytics_analytics.svc/RPZBB683E8960C6B776E12234QueryResults",
         method: "GET",
         qs: query
     }
@@ -214,7 +219,7 @@ function GetSalesOrders(query, callback) {
     var options = {}
     var select = ""
 
-    options.url = getByDserver() + model_sales
+    options.url = bydDest.destinationConfiguration.URL + bydRoute.target.entryPath + model_sales
     options.method = "GET"
     options.qs = odata.formatQuery(query, select)
 
@@ -229,7 +234,7 @@ function GetSalesOrders(query, callback) {
 
 function PostSalesOrder(body, callback) {
     var opt = {
-        url: getByDserver() + model_sales,
+        url: bydDest.destinationConfiguration.URL + bydRoute.target.entryPath + model_sales,
         method: "POST",
         headers: [],
         body: {
@@ -286,7 +291,7 @@ let Connect = function () {
     return new Promise(function (resolve, reject) {
 
         var options = {
-            url: getByDserver() + model_sales,
+            url: bydDest.destinationConfiguration.URL + bydRoute.target.entryPath + model_sales,
             method: "GET"
         };
 
@@ -390,12 +395,4 @@ function formatByDResp(output) {
     }
 
     return output
-}
-
-function getByDHeader() {
-    return ByDHeader
-}
-
-function getByDserver() {
-    return ByDServer
 }
